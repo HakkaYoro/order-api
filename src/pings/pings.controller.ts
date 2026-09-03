@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param, ParseIntPipe } from "@nestjs/common";
 import { PingService } from "./pings.service";
 
 @Controller("pings")
@@ -10,7 +10,7 @@ export class PingController {
 		return this.pingService.ping();
 	}
     @Get(':num')
-    pingNum(@Param('num') num:string){
-        return this.pingService.pingNum(+num);
+    pingNum(@Param('num',ParseIntPipe) num:number){
+        return this.pingService.pingNum(num);
     }
 }
