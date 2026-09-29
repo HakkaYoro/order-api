@@ -1,7 +1,7 @@
+import { NotFoundException } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { beforeEach, describe, expect, it } from "vitest";
 import { OrdersService } from "./orders.service";
-import { NotFoundException } from "@nestjs/common";
 
 describe("OrdersService", () => {
 	let service: OrdersService;
