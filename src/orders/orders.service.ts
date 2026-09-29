@@ -1,49 +1,48 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderDto } from "./dto/update-order.dto";
 import { Order } from "./entities/order.entity";
 
 @Injectable()
 export class OrdersService {
-	private inventory: Order[] = [];
-	private nxId = 1;
-	create(createOrderDto: CreateOrderDto): Order {
+	constructor(
+		@InjectRepository(Order)
+		private readonly ordersRepository: Repository<Order>,
+	) {}
+	async create(createOrderDto: CreateOrderDto): Promise<Order> {
 		const newItem = new Order();
-		newItem.id = this.nxId++;
 		newItem.cliente = createOrderDto.cliente;
 		newItem.item = createOrderDto.item;
 		newItem.cantidad = createOrderDto.cantidad;
-		this.inventory.push(newItem);
-		return newItem;
+		return await this.ordersRepository.save(newItem);
 	}
 
-	findAll(): Order[] {
-		return this.inventory;
+	async findAll(): Promise<Order[]> {
+		return this.ordersRepository.find();
 	}
 
-	findOne(id: number): Order {
-		const item = this.inventory.find((item) => item.id === id);
+	async findOne(id: number): Promise<Order> {
+		const item = await this.ordersRepository.findOneBy({ id });
 		if (!item) {
 			throw new NotFoundException(`No existe el item con ID ${id}... Baka!`);
 		}
 		return item;
 	}
 
-	update(id: number, updateOrderDto: UpdateOrderDto): Order {
-		const item = this.inventory.find((itemId) => itemId.id === id);
+	async update(id: number, updateOrderDto: UpdateOrderDto): Promise<Order> {
+		const item = await this.ordersRepository.findOneBy({ id });
 		if (!item) {
 			throw new NotFoundException(`No existe el item con ID ${id}... Baka!`);
 		}
 		Object.assign(item, updateOrderDto);
-		return item;
+		return this.ordersRepository.save(item);
 	}
 
-	remove(id: number): { message: string } {
-		const item = this.inventory.findIndex((itemId) => itemId.id === id);
-		if (item === -1) {
-			throw new NotFoundException(`No existe el item con ID ${id}... Baka!`);
-		}
-		this.inventory.splice(item, 1);
+	async remove(id: number): Promise<{ message: string }> {
+		const item = await this.findOne(id);
+		await this.ordersRepository.remove(item);
 		return { message: `Eliminado satisfactoriamente el item con ID ${id}!` };
 	}
 }
