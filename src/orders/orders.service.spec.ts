@@ -85,13 +85,14 @@ describe("OrdersService", () => {
 		});
 	});
 	it("findAll: devuelve exactamente los pedidos creados (0 al inicio, 2 tras crear 2).", async () => {
+		repo.find.mockResolvedValueOnce([]);
 		expect(await service.findAll()).toHaveLength(0);
 		repo.save
 			.mockResolvedValueOnce({
 				id: 1,
 				cliente: "Reimu Hakurei",
 				item: "Bolsa de Arroz",
-				cantidad: 1,
+				cantidad: 6,
 			})
 			.mockResolvedValueOnce({
 				id: 2,
@@ -109,6 +110,8 @@ describe("OrdersService", () => {
 			item: "Grimorios de Patchy",
 			cantidad: 5,
 		});
+
+		repo.find.mockResolvedValueOnce([pedido1, pedido2]);
 		expect(await service.findAll()).toHaveLength(2);
 	});
 	it("findOne: con un id existente → devuelve ese pedido.", async () => {
@@ -133,28 +136,22 @@ describe("OrdersService", () => {
 	});
 	// Leyendo docs resolví este.
 	it("findOne: con un id que NO existe.", async () => {
-		expect(async () => await service.findOne(67)).toThrow(NotFoundException);
+		repo.findOneBy.mockResolvedValueOnce(undefined);
+
+		await expect(service.findOne(67)).rejects.toThrow(
+			new NotFoundException(`No existe el item con ID 67... Baka!`),
+		);
 	});
 	it("update: cambia SOLO el campo enviado (cantidad) y conserva los otros (cliente, item intactos).", async () => {
-		repo.save.mockResolvedValueOnce({
+		const pedido = {
 			id: 1,
 			cliente: "Reimu Hakurei",
 			item: "Bolsa de Arroz",
 			cantidad: 6,
-		});
-		repo.findOneBy.mockResolvedValueOnce({
-			id: 1,
-			cliente: "Reimu Hakurei",
-			item: "Bolsa de Arroz",
-			cantidad: 6,
-		});
+		};
+		repo.findOneBy.mockResolvedValueOnce(pedido);
+		repo.save.mockResolvedValueOnce({ ...pedido, cantidad: 5 });
 
-		const pedido1 = await service.create({
-			cliente: "Reimu Hakurei",
-			item: "Bolsa de Arroz",
-			cantidad: 6,
-		});
-		expect(pedido1.cantidad).toBe(6);
 		expect(await service.update(1, { cantidad: 5 })).toEqual({
 			id: 1,
 			cliente: "Reimu Hakurei",
@@ -163,27 +160,42 @@ describe("OrdersService", () => {
 		});
 	});
 	it("update: id inexistente → lanza (misma familia del 404).", async () => {
-		expect(async () => await service.update(1, { cantidad: 5 })).toThrow(
-			NotFoundException,
+		repo.findOneBy.mockResolvedValueOnce(undefined);
+		await expect(service.update(1, { cantidad: 5 })).rejects.toThrow(
+			new NotFoundException(`No existe el item con ID 1... Baka!`),
 		);
 	});
 	it("remove: el pedido deja de estar en findAll después de borrarlo.", async () => {
-		repo.findOneBy.mockResolvedValueOnce({
+		const pedido = {
 			id: 1,
 			cliente: "Reimu Hakurei",
 			item: "Bolsa de Arroz",
 			cantidad: 6,
+		};
+
+		const pedidos = [pedido];
+
+		repo.findOneBy.mockImplementation(async ({ id }: { id: number }) =>
+			pedidos.find((pedido) => pedido.id === id),
+		);
+		repo.find.mockImplementation(async () => pedidos);
+		repo.remove.mockImplementation(async (pedido: (typeof pedidos)[number]) => {
+			const index = pedidos.indexOf(pedido);
+			pedidos.splice(index, 1);
+			return pedido;
 		});
 
-		const pedido1 = await service.create({
-			cliente: "Reimu Hakurei",
-			item: "Bolsa de Arroz",
-			cantidad: 6,
+		await expect(service.remove(1)).resolves.toEqual({
+			message: "Eliminado satisfactoriamente el item con ID 1!",
 		});
-		expect(await service.remove(1)).toBeTruthy();
-		expect(await service.findAll()).toHaveLength(0);
+
+		expect(repo.remove).toHaveBeenCalledWith(pedido);
+		await expect(service.findAll()).resolves.toEqual([]);
 	});
 	it("remove: id inexistente → lanza.", async () => {
-		expect(async () => await service.remove(1)).toThrow(NotFoundException);
+		repo.findOneBy.mockResolvedValueOnce(undefined);
+		await expect(service.remove(1)).rejects.toThrow(
+			new NotFoundException(`No existe el item con ID 1... Baka!`),
+		);
 	});
 });
