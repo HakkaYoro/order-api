@@ -1,11 +1,21 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import {
+	Column,
+	Entity,
+	ManyToOne,
+	OneToMany,
+	PrimaryGeneratedColumn,
+} from "typeorm";
+import { Clientes } from "./clientes.entity";
 
 @Entity()
 export class Order {
 	@PrimaryGeneratedColumn()
 	id: number;
-	@Column()
-	cliente: string;
+	@ManyToOne(
+		() => Clientes,
+		(cliente) => cliente.orders,
+	)
+	cliente: Clientes;
 	@Column()
 	item: string;
 	@Column()

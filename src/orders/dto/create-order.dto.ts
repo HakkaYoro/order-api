@@ -1,7 +1,7 @@
 import { IsInt, IsNotEmpty, IsString, Max, Min } from "class-validator";
 
 export class CreateOrderDto {
-	@IsString()
+	@IsInt()
 	@IsNotEmpty()
 	cliente: string;
 	@IsString()
