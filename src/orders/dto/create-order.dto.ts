@@ -1,12 +1,32 @@
-import { IsInt, IsNotEmpty, IsString, Max, Min } from "class-validator";
+import { Type } from "class-transformer";
+import {
+	IsInt,
+	IsNotEmpty,
+	IsOptional,
+	IsString,
+	Max,
+	Min,
+	ValidateNested,
+} from "class-validator";
 
-export class CreateOrderDto {
+class CreateClienteDto {
+	@IsOptional()
 	@IsInt()
+	id?: number;
+
+	@IsString()
 	@IsNotEmpty()
-	cliente: string;
+	nomCompleto: string;
+}
+export class CreateOrderDto {
+	@ValidateNested()
+	@Type(() => CreateClienteDto)
+	cliente: CreateClienteDto;
+
 	@IsString()
 	@IsNotEmpty()
 	item: string;
+
 	@IsInt()
 	@Min(1)
 	@Max(99)
