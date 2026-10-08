@@ -2,6 +2,7 @@ import { NotFoundException } from "@nestjs/common";
 import { Test, type TestingModule } from "@nestjs/testing";
 import { getRepositoryToken } from "@nestjs/typeorm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Clientes } from "./entities/clientes.entity";
 import { Order } from "./entities/order.entity";
 import { OrdersService } from "./orders.service";
 
@@ -21,6 +22,7 @@ describe("OrdersService", () => {
 			providers: [
 				OrdersService,
 				{ provide: getRepositoryToken(Order), useValue: repo },
+				{ provide: getRepositoryToken(Clientes), useValue: repo },
 			],
 		}).compile();
 		service = module.get<OrdersService>(OrdersService);
@@ -31,27 +33,39 @@ describe("OrdersService", () => {
 	});
 
 	it("create: el PRIMER pedido creado tiene id 1; el segundo tiene id 2.", async () => {
+		// El vi.fn() me está devolviendo undefined porque ambos tokens
+		// comparten un mismo fake y la cola es única. Como el save del
+		// cliente se consume el primer Once, la cola se vacía antes de
+		// llegar al save del pedido y por eso termina en undefined.
 		repo.save
 			.mockResolvedValueOnce({
 				id: 1,
-				cliente: "Reimu Hakurei",
+				nomCompleto: "Reimu Hakurei",
+			})
+			.mockResolvedValueOnce({
+				id: 1,
+				cliente: { id: 1, nomCompleto: "Reimu Hakurei" },
 				item: "Bolsa de Arroz",
 				cantidad: 1,
 			})
 			.mockResolvedValueOnce({
 				id: 2,
-				cliente: "Marisa Kirisame",
+				nomCompleto: "Marisa Kirisame",
+			})
+			.mockResolvedValueOnce({
+				id: 2,
+				cliente: { id: 2, nomCompleto: "Marisa Kirisame" },
 				item: "Grimorios de Patchy",
 				cantidad: 5,
 			});
 
 		const pedido1 = await service.create({
-			cliente: "Reimu Hakurei",
+			cliente: { nomCompleto: "Reimu Hakurei" },
 			item: "Bolsa de Arroz",
 			cantidad: 1,
 		});
 		const pedido2 = await service.create({
-			cliente: "Marisa Kirisame",
+			cliente: { nomCompleto: "Marisa Kirisame" },
 			item: "Grimorios de Patchy",
 			cantidad: 5,
 		});
@@ -59,27 +73,25 @@ describe("OrdersService", () => {
 		expect(pedido2.id).toBe(2);
 	});
 	it("create: devuelve el pedido creado CON sus campos (cliente, item, cantidad) y el id asignado por el server.", async () => {
-		repo.save
-			.mockResolvedValueOnce({
-				id: 1,
-				cliente: "Reimu Hakurei",
-				item: "Bolsa de Arroz",
-				cantidad: 1,
-			})
-			.mockResolvedValueOnce({
-				id: 2,
-				cliente: "Marisa Kirisame",
-				item: "Grimorios de Patchy",
-				cantidad: 5,
-			});
+		repo.save.mockResolvedValueOnce({
+			id: 1,
+			nomCompleto: "Reimu Hakurei",
+		});
+		repo.save.mockResolvedValueOnce({
+			id: 1,
+			cliente: { id: 1, nomCompleto: "Reimu Hakurei" },
+			item: "Bolsa de Arroz",
+			cantidad: 1,
+		});
+
 		const pedido1 = await service.create({
-			cliente: "Reimu Hakurei",
+			cliente: { nomCompleto: "Reimu Hakurei" },
 			item: "Bolsa de Arroz",
 			cantidad: 1,
 		});
 		expect(pedido1).toEqual({
 			id: 1,
-			cliente: "Reimu Hakurei",
+			cliente: { id: 1, nomCompleto: "Reimu Hakurei" },
 			item: "Bolsa de Arroz",
 			cantidad: 1,
 		});
@@ -101,12 +113,12 @@ describe("OrdersService", () => {
 				cantidad: 5,
 			});
 		const pedido1 = await service.create({
-			cliente: "Reimu Hakurei",
+			cliente: { nomCompleto: "Reimu Hakurei" },
 			item: "Bolsa de Arroz",
 			cantidad: 6,
 		});
 		const pedido2 = await service.create({
-			cliente: "Marisa Kirisame",
+			cliente: { nomCompleto: "Marisa Kirisame" },
 			item: "Grimorios de Patchy",
 			cantidad: 5,
 		});
@@ -123,7 +135,7 @@ describe("OrdersService", () => {
 		});
 
 		const pedido1 = await service.create({
-			cliente: "Reimu Hakurei",
+			cliente: { nomCompleto: "Reimu Hakurei" },
 			item: "Bolsa de Arroz",
 			cantidad: 6,
 		});
