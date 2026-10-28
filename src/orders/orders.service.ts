@@ -40,7 +40,7 @@ export class OrdersService {
 	}
 
 	async findAll(): Promise<Order[]> {
-		return this.ordersRepository.find();
+		return this.ordersRepository.find({ relations: { cliente: true } });
 	}
 
 	async findOne(id: number): Promise<Order> {
