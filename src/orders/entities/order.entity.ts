@@ -20,4 +20,6 @@ export class Order {
 	item: string;
 	@Column()
 	cantidad: number;
+	@Column()
+	precio: number;
 }

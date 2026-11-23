@@ -3,6 +3,7 @@ import { Money } from "../value-objects/money";
 
 export class OrderDelNegocio {
 	readonly cantidad: CantidadDelNegocio;
+	readonly precioUnitarioCentavos: number;
 	readonly total: Money;
 
 	private constructor(
@@ -10,6 +11,7 @@ export class OrderDelNegocio {
 		precioUnitarioCentavos: number,
 	) {
 		this.cantidad = cantidad;
+		this.precioUnitarioCentavos = precioUnitarioCentavos;
 		this.total = new Money(precioUnitarioCentavos * cantidad.value);
 	}
 
