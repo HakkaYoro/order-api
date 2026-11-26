@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, NotImplementedException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { OrderDelNegocio } from "./domain/entities/order.entity";
+import type { OrdersRepository } from "./domain/repositories/orders.repository";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { UpdateOrderDto } from "./dto/update-order.dto";
 import { Clientes } from "./entities/clientes.entity";
@@ -9,14 +11,13 @@ import { Order } from "./entities/order.entity";
 @Injectable()
 export class OrdersService {
 	constructor(
-		@InjectRepository(Order)
-		private readonly ordersRepository: Repository<Order>,
+		@Inject("OrdersRepository")
+		private readonly ordersRepository: OrdersRepository,
 
 		@InjectRepository(Clientes)
 		private readonly clientesRepository: Repository<Clientes>,
 	) {}
-	async create(createOrderDto: CreateOrderDto): Promise<Order> {
-		let clienteGuardado: Clientes;
+	async create(createOrderDto: CreateOrderDto): Promise<void> {
 		if (createOrderDto.cliente.id) {
 			const clienteExistente = await this.clientesRepository.findOneBy({
 				id: createOrderDto.cliente.id,
@@ -26,25 +27,27 @@ export class OrdersService {
 					`No existe el cliente con ID ${createOrderDto.cliente.id}`,
 				);
 			}
-			clienteGuardado = clienteExistente;
 		} else {
 			const nuevoCliente = new Clientes();
 			nuevoCliente.nomCompleto = createOrderDto.cliente.nomCompleto;
-			clienteGuardado = await this.clientesRepository.save(nuevoCliente);
+			await this.clientesRepository.save(nuevoCliente);
 		}
-		const newItem = new Order();
-		newItem.cliente = clienteGuardado;
-		newItem.item = createOrderDto.item;
-		newItem.cantidad = createOrderDto.cantidad;
-		return await this.ordersRepository.save(newItem);
+		const order = OrderDelNegocio.crear(
+			createOrderDto.cantidad,
+			createOrderDto.precioUnitarioCentavos,
+		);
+		// Decisión: precio en DTO porque aún no hay catálogo; no invento un default.
+		// Al añadir catálogo, resolverlo server-side.
+		// Decisión: create devuelve void porque guardar también; devolver Order requiere id en el dominio (C.3).
+		await this.ordersRepository.guardar(order);
 	}
 
-	async findAll(): Promise<Order[]> {
-		return this.ordersRepository.find({ relations: { cliente: true } });
+	async findAll(): Promise<OrderDelNegocio[]> {
+		return this.ordersRepository.buscarTodos();
 	}
 
-	async findOne(id: number): Promise<Order> {
-		const item = await this.ordersRepository.findOneBy({ id });
+	async findOne(id: number): Promise<OrderDelNegocio> {
+		const item = await this.ordersRepository.buscarPorId(id);
 		if (!item) {
 			throw new NotFoundException(`No existe el item con ID ${id}... Baka!`);
 		}
@@ -52,17 +55,13 @@ export class OrdersService {
 	}
 
 	async update(id: number, updateOrderDto: UpdateOrderDto): Promise<Order> {
-		const item = await this.ordersRepository.findOneBy({ id });
-		if (!item) {
-			throw new NotFoundException(`No existe el item con ID ${id}... Baka!`);
-		}
-		Object.assign(item, updateOrderDto);
-		return this.ordersRepository.save(item);
+		// Decisión: lanza 501 porque hoy no se puede hacer bien; Object.assign mete un número suelto donde va un CantidadDelNegocio, y guardar solo inserta (new Order), nunca actualiza.
+		throw new NotImplementedException();
 	}
 
 	async remove(id: number): Promise<{ message: string }> {
-		const item = await this.findOne(id);
-		await this.ordersRepository.remove(item);
+		await this.findOne(id);
+		await this.ordersRepository.eliminar(id);
 		return { message: `Eliminado satisfactoriamente el item con ID ${id}!` };
 	}
 }

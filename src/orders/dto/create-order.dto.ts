@@ -31,4 +31,8 @@ export class CreateOrderDto {
 	@Min(1)
 	@Max(99)
 	cantidad: number;
+
+	@IsInt()
+	@Min(0)
+	precioUnitarioCentavos: number;
 }

@@ -27,4 +27,7 @@ export class OrdersORM implements OrdersRepository {
 		fila.precio = order.precioUnitarioCentavos;
 		await this.repo.save(fila);
 	}
+	async eliminar(id: number): Promise<void> {
+		await this.repo.delete(id);
+	}
 }

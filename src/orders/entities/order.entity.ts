@@ -20,6 +20,7 @@ export class Order {
 	item: string;
 	@Column()
 	cantidad: number;
-	@Column()
+	// Decisión: nullable y no default 0; de las 212 filas viejas no sé cuánto pagaron, y un 0 diría que pagaron 0.
+	@Column({ nullable: true })
 	precio: number;
 }
